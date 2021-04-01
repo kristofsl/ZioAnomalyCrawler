@@ -50,6 +50,11 @@ object AlgorithmUtil {
     randomSeed.map(new Random(_).between(start + 0.00000001, end)).getOrElse(Random.between(start + 0.00000001, end))
   }
 
+  /** generate a random into from 0 to end interval (not inclusive) */
+  def getRandomInt(end:Int, randomSeed: Option[Int] = None) = {
+    randomSeed.map(new Random(_).nextInt(end)).getOrElse(Random.nextInt(end))
+  }
+
   /** generate 2 lists from 1 list based on a split value */
   def splitList(input: List[Double], split: Double): (List[Double], List[Double]) = {
     val belowList: List[Double] = input.filter(_ <= split)
