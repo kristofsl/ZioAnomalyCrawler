@@ -1,28 +1,37 @@
 
-import model.Model.AnomalyDetectionInputFeatureRecord
+import model.Model.{AnomalyDetectionInputFeatureRecord, AnomalyDetectionResult}
 import services.IsolationForest.IsolationForestEnv
 import services.Logging.{LoggingEnv, logError, logInfo}
 import services.{IsolationForest, Logging}
-import zio._
+import zio.{Queue, UIO, _}
 
-object Main extends scala.App {
+object MinimalApplication extends cask.MainRoutes{
+  val rt = Runtime.default
 
-  /** our Zlayer defintion */
+  @cask.get("/")
+  def hello() = {
+    "Server is responding ..."
+  }
+
+
+  @cask.postJson("/anomaly_set_one_dimension")
+  def anomalyCrawlOnOneDimensionalSet(name: ujson.Value, values: ujson.Value):String = {
+    rt.unsafeRun(
+      handleOneDimensionalHttpRequest.handleRequest(name.str, values.arr.map(_.num).toList).map(r => "OK")
+    )
+  }
+
+  initialize()
+}
+
+object handleOneDimensionalHttpRequest {
   val backendLive:ZLayer[Any, Throwable, LoggingEnv with IsolationForestEnv] = Logging.live ++ IsolationForest.live
 
-  /** our main program */
-  val mainProgram : ZIO[Has[Logging.Service] with Has[IsolationForest.Service], Throwable, Unit] = for {
-    _         <- Logging.logInfo("Starting up ...")
-    result    <- IsolationForest.anomalyDetection(List("label"), List(AnomalyDetectionInputFeatureRecord(
-                    "key", List(1)
-                  )), 1, 1, 1, Some(1))
-    _         <- Logging.logInfo(result.mkString("-"))
-    _         <- Logging.logInfo("Finished ...")
-  } yield()
-
-  val rt = Runtime.default
-  rt.unsafeRun(
-    mainProgram.provideLayer(backendLive)
-  )
-
+  def handleRequest(name: String, values:List[Double]): ZIO[Any, Throwable, Unit]= {
+      for {
+        input:List[AnomalyDetectionInputFeatureRecord] <- ZIO.effect(values.map(v => new AnomalyDetectionInputFeatureRecord("key",List(v))))
+        result                                         <- IsolationForest.anomalyDetection(List("feature_1"), input,100,50,50).provideLayer(backendLive)
+        _                                              <- Logging.logInfo(result.filter(_.anomaly).map(a => (a.inputRecord.input.head,a.anomalyScore,a.avgDepth)).mkString("-")).provideLayer(backendLive)
+      } yield()
+  }
 }

@@ -1,4 +1,3 @@
-import Main.{backendLive, mainProgram}
 import model.Model.AnomalyDetectionInputFeatureRecord
 import org.scalatest.funsuite.AnyFunSuite
 import services.{IsolationForest, Logging}
@@ -31,8 +30,6 @@ class IsolationForestGridSearch extends AnyFunSuite {
     buffer.append(AnomalyDetectionInputFeatureRecord("X",List(-1)))
     buffer.append(AnomalyDetectionInputFeatureRecord("X",List(-8)))
     buffer.append(AnomalyDetectionInputFeatureRecord("X",List(-4)))
-
-
 
     val layer: ZLayer[Any, Nothing, Has[IsolationForest.Service]] = IsolationForest.live
 
