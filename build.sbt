@@ -10,7 +10,8 @@ lazy val root = (project in file("."))
       "dev.zio" %% "zio" % "1.0.5",
       "dev.zio" %% "zio-test" % "1.0.5" % Test,
       "dev.zio" %% "zio-test-sbt" % "1.0.5" % Test,
-      "com.lihaoyi" %% "cask" % "0.7.7",
+      "dev.zio" %% "zio-streams" % "1.0.5",
+      "dev.zio" %% "zio-kafka" % "0.14.0",
       "org.scalactic" %% "scalactic" % "3.2.5",
       "org.scalatest" %% "scalatest" % "3.2.5" % Test
     ),

@@ -1,37 +1,50 @@
+import zio.{ExitCode, UIO, ZIO, ZLayer, ZManaged}
+import zio.kafka.consumer.{Consumer, ConsumerSettings}
+import zio.blocking.Blocking
+import zio.clock.Clock
+import zio.kafka.consumer._
+import zio.kafka.serde.Serde
+import zio._
+import zio.duration.durationInt
 
-import model.Model.{AnomalyDetectionInputFeatureRecord, AnomalyDetectionResult}
-import services.IsolationForest.IsolationForestEnv
-import services.Logging.{LoggingEnv, logError, logInfo}
-import services.{IsolationForest, Logging}
-import zio.{Queue, UIO, _}
+object MyApp extends App {
 
-object MinimalApplication extends cask.MainRoutes{
-  val rt = Runtime.default
+  val consumerSettings: ConsumerSettings = ConsumerSettings(List(""))
+    .withGroupId("ZioAnomalyCrawler")
+    .withCloseTimeout(30.seconds)
+    .withClientId("ZioAnomalyCrawler")
+    .withProperty("enable.auto.commit", "false")
+    .withProperty("security.protocol", "SASL_SSL")
+    .withProperty("sasl.mechanism", "PLAIN")
+    .withProperty("auto.offset.reset", "earliest")
 
-  @cask.get("/")
-  def hello() = {
-    "Server is responding ..."
+  val consumerManaged: ZManaged[Clock with Blocking, Throwable, Consumer.Service] =
+    Consumer.make(consumerSettings)
+  val consumer: ZLayer[Clock with Blocking, Throwable, Consumer] =
+    ZLayer.fromManaged(consumerManaged)
+
+  def logic(): ZIO[zio.ZEnv, Throwable, Unit] = {
+    for {
+      _   <- ZIO.effect(println("Starting the kafka topic subscription .."))
+      _   <- Consumer.subscribeAnd(Subscription.topics("AS400_COMPLETION_EVENT_LIVE_TOPIC"))
+            .plainStream(Serde.string, Serde.string)
+            .groupedWithin(1000, 30.seconds)
+            .mapM { batch =>
+              processRecords(batch) *>
+                batch.map(_.offset)
+                  .foldLeft(OffsetBatch.empty)(_ merge _)
+                  .commit
+            }
+            .runDrain
+            .fork
+            .provideCustomLayer(consumer)
+            .foldM(err => UIO(println(err)).as(1), _ => UIO.succeed(0))
+    } yield()
   }
 
-
-  @cask.postJson("/anomaly_set_one_dimension")
-  def anomalyCrawlOnOneDimensionalSet(name: ujson.Value, values: ujson.Value):String = {
-    rt.unsafeRun(
-      handleOneDimensionalHttpRequest.handleRequest(name.str, values.arr.map(_.num).toList).map(r => "OK")
-    )
+  def processRecords(value: Chunk[CommittableRecord[String, String]]): Task[Unit]= {
+    ZIO.succeed()
   }
 
-  initialize()
-}
-
-object handleOneDimensionalHttpRequest {
-  val backendLive:ZLayer[Any, Throwable, LoggingEnv with IsolationForestEnv] = Logging.live ++ IsolationForest.live
-
-  def handleRequest(name: String, values:List[Double]): ZIO[Any, Throwable, Unit]= {
-      for {
-        input:List[AnomalyDetectionInputFeatureRecord] <- ZIO.effect(values.map(v => new AnomalyDetectionInputFeatureRecord("key",List(v))))
-        result                                         <- IsolationForest.anomalyDetection(List("feature_1"), input,100,50,50).provideLayer(backendLive)
-        _                                              <- Logging.logInfo(result.filter(_.anomaly).map(a => (a.inputRecord.input.head,a.anomalyScore,a.avgDepth)).mkString("-")).provideLayer(backendLive)
-      } yield()
-  }
+  override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] = logic().exitCode
 }

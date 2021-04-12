@@ -25,7 +25,4 @@ object Model {
   case class InvalidTreeParamsError(message: String) extends Exception {
     override def getMessage: String = message
   }
-
-  /** the threshold value which is used to categorize the anomalies */
-  val anomalyThreshold:Double = 0.75
 }
