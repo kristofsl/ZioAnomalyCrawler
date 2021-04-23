@@ -182,6 +182,34 @@ object IsolationForestSpecBasicSetOneFeature extends DefaultRunnableSpec {
         inputFeatureRecord_10), 50, 50, 100, Some(1)).provideLayer(layer)
         .map(n => assert(n.map(r => (r.anomalyScore)))(equalTo(List(
           0.8586640465796392, 0.543617107148175, 0.42986584599926375, 0.42986584599926375, 0.543617107148175, 0.543617107148175, 0.543617107148175, 0.543617107148175, 0.42986584599926375, 0.6330963888771086))))
+    },
+    /** a simple scenario with one feature and one clear anomaly in the middle region */
+    testM("happy_path_one_feature_one_middle_anomaly") {
+      val inputFeatureRecord_1 = AnomalyDetectionInputFeatureRecord("1", List(20))
+      val inputFeatureRecord_2 = AnomalyDetectionInputFeatureRecord("2", List(20))
+      val inputFeatureRecord_3 = AnomalyDetectionInputFeatureRecord("3", List(21))
+      val inputFeatureRecord_4 = AnomalyDetectionInputFeatureRecord("4", List(22))
+      val inputFeatureRecord_5 = AnomalyDetectionInputFeatureRecord("5", List(23))
+      val inputFeatureRecord_6 = AnomalyDetectionInputFeatureRecord("6", List(100))
+      val inputFeatureRecord_7 = AnomalyDetectionInputFeatureRecord("7", List(200))
+      val inputFeatureRecord_8 = AnomalyDetectionInputFeatureRecord("8", List(201))
+      val inputFeatureRecord_9 = AnomalyDetectionInputFeatureRecord("9", List(202))
+      val inputFeatureRecord_10 = AnomalyDetectionInputFeatureRecord("10", List(203))
+      val layer: ZLayer[Any, Nothing, Has[IsolationForest.Service]] = IsolationForest.live
+
+      IsolationForest.anomalyDetection(List("feature_x"), List(
+        inputFeatureRecord_1,
+        inputFeatureRecord_2,
+        inputFeatureRecord_3,
+        inputFeatureRecord_4,
+        inputFeatureRecord_5,
+        inputFeatureRecord_6,
+        inputFeatureRecord_7,
+        inputFeatureRecord_8,
+        inputFeatureRecord_9,
+        inputFeatureRecord_10), 50, 50, 100, Some(1)).provideLayer(layer)
+        .map(n => assert(n.map(r => (r.anomalyScore)))(equalTo(List(
+          0.4008110376092352, 0.4008110376092352, 0.4667844650137693, 0.543617107148175, 0.6330963888771086, 0.7373039448885209, 0.543617107148175, 0.543617107148175, 0.6330963888771086, 0.7373039448885209))))
     }
   )
 

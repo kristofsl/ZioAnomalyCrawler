@@ -1,8 +1,11 @@
-import model.Model.{ExternalNode, ITree, InternalNode}
+import model.Model.{AnomalyDetectionInputFeatureRecord, ITree}
 import org.scalatest.BeforeAndAfter
 import org.scalatest.funsuite.AnyFunSuite
 import services.AlgorithmUtil
 import services.AlgorithmUtil.pathLength
+import java.util.UUID
+import scala.collection.mutable.ListBuffer
+import scala.util.Random
 
 class AlgorithmUtilTest extends AnyFunSuite with BeforeAndAfter {
 
@@ -10,72 +13,60 @@ class AlgorithmUtilTest extends AnyFunSuite with BeforeAndAfter {
     // Setup
   )
 
+  def generateAnomalyDetectionInputOneFeatureRecord(start: Int, end: Int) = {
+    AnomalyDetectionInputFeatureRecord(UUID.randomUUID().toString, List(Random.between(start + 0.00000001, end)))
+  }
+
   test(testName = "build_tree_simple") {
-    val t: ITree[List[Double]] = AlgorithmUtil.buildTree(List(1,2,3,4,5,6,7), maxDepth = 100, randomSeed = Some(1))
-    assert(t.toString == "InternalNode(5.3852691469109635,InternalNode(3.9235127655043813,InternalNode(2.4617563840978,InternalNode(1.730878193394509,ExternalNode(List(1.0)),ExternalNode(List(2.0))),ExternalNode(List(3.0))),InternalNode(4.730878193394509,ExternalNode(List(4.0)),ExternalNode(List(5.0)))),InternalNode(6.730878193394509,ExternalNode(List(6.0)),ExternalNode(List(7.0))))")
+    println("\nSimple test")
+    var buffer: ListBuffer[AnomalyDetectionInputFeatureRecord] = new ListBuffer[AnomalyDetectionInputFeatureRecord]
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(-200)))
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(300)))
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(400)))
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(600)))
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(800)))
+    val t: ITree[List[AnomalyDetectionInputFeatureRecord]] = AlgorithmUtil.buildTree(buffer.toList, List("X"), maxDepth = 100, randomSeed = Some(1))
+    assert(t.toString == "InternalNode(530.8781907059821,X,0,InternalNode(238.52691442466573,X,0,ExternalNode(List(AnomalyDetectionInputFeatureRecord(X,List(-200.0))),X,0),InternalNode(373.0878190730203,X,0,ExternalNode(List(AnomalyDetectionInputFeatureRecord(X,List(300.0))),X,0),ExternalNode(List(AnomalyDetectionInputFeatureRecord(X,List(400.0))),X,0))),InternalNode(746.1756381433494,X,0,ExternalNode(List(AnomalyDetectionInputFeatureRecord(X,List(600.0))),X,0),ExternalNode(List(AnomalyDetectionInputFeatureRecord(X,List(800.0))),X,0)))")
   }
 
   test(testName = "build_tree_simple_duplicates") {
-    val t: ITree[List[Double]] = AlgorithmUtil.buildTree(List(1,2,3,4,4,4,5,5,6,7), maxDepth = 100, randomSeed = Some(1))
-    assert(t.toString == "InternalNode(5.3852691469109635,InternalNode(3.9235127655043813,InternalNode(2.4617563840978,InternalNode(1.730878193394509,ExternalNode(List(1.0)),ExternalNode(List(2.0))),ExternalNode(List(3.0))),InternalNode(4.730878193394509,ExternalNode(List(4.0, 4.0, 4.0)),ExternalNode(List(5.0, 5.0)))),InternalNode(6.730878193394509,ExternalNode(List(6.0)),ExternalNode(List(7.0))))")
+    println("\nDuplicates limit test")
+    var buffer: ListBuffer[AnomalyDetectionInputFeatureRecord] = new ListBuffer[AnomalyDetectionInputFeatureRecord]
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(-200)))
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(-300)))
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(-200)))
+    val t: ITree[List[AnomalyDetectionInputFeatureRecord]] = AlgorithmUtil.buildTree(buffer.toList, List("X"), maxDepth = 100, randomSeed = Some(1))
+    assert(t.toString == "InternalNode(-226.91218092697972,X,0,ExternalNode(List(AnomalyDetectionInputFeatureRecord(X,List(-300.0))),X,0),ExternalNode(List(AnomalyDetectionInputFeatureRecord(X,List(-200.0)), AnomalyDetectionInputFeatureRecord(X,List(-200.0))),X,0))")
   }
 
   test(testName = "build_tree_simple_depth_limit") {
-    val t: ITree[List[Double]] = AlgorithmUtil.buildTree(List(1,2,3,4,4,4,5,5,6,7), maxDepth = 2, randomSeed = Some(1))
-    assert(t.toString == "InternalNode(5.3852691469109635,InternalNode(3.9235127655043813,ExternalNode(List(1.0, 2.0, 3.0)),ExternalNode(List(4.0, 4.0, 4.0, 5.0, 5.0))),InternalNode(6.730878193394509,ExternalNode(List(6.0)),ExternalNode(List(7.0))))")
+    println("\nDepth limit test")
+    var buffer: ListBuffer[AnomalyDetectionInputFeatureRecord] = new ListBuffer[AnomalyDetectionInputFeatureRecord]
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(-220)))
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(-320)))
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(-220)))
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(100)))
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(700)))
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(120)))
+
+    val t: ITree[List[AnomalyDetectionInputFeatureRecord]] = AlgorithmUtil.buildTree(buffer.toList, List("X"), maxDepth = 2, randomSeed = Some(1))
+    assert(t.toString == "InternalNode(425.49575452004785,X,0,InternalNode(1.5864039121391897,X,0,ExternalNode(List(AnomalyDetectionInputFeatureRecord(X,List(-220.0)), AnomalyDetectionInputFeatureRecord(X,List(-320.0)), AnomalyDetectionInputFeatureRecord(X,List(-220.0))),X,0),ExternalNode(List(AnomalyDetectionInputFeatureRecord(X,List(100.0)), AnomalyDetectionInputFeatureRecord(X,List(120.0))),X,0)),ExternalNode(List(AnomalyDetectionInputFeatureRecord(X,List(700.0))),X,0))")
   }
 
   test(testName = "path_length") {
-    // simple tree cases
-    assert(AlgorithmUtil.pathLength(ExternalNode(List(1)), 1, 0) == Some(0))
-    assert(AlgorithmUtil.pathLength(ExternalNode(List(1)), 2, 0) == None)
-    assert(AlgorithmUtil.pathLength(tree = InternalNode(splitValue = 1, left = ExternalNode(List(0.4)), right = ExternalNode(List(3))), inputValue = 0.4, 0) == Some(1.0))
-    assert(AlgorithmUtil.pathLength(tree = InternalNode(splitValue = 1, left = ExternalNode(List(0.4)), right = ExternalNode(List(3))), inputValue = 3, 0) == Some(1.0))
-
-    // invalid tree case, but we expect to get the length of the last leaf
-    assert(AlgorithmUtil.pathLength(tree = InternalNode(splitValue = 1, left = ExternalNode(List(0.4)), right = ExternalNode(List(3))), inputValue = 5, 0) == None)
-    assert(AlgorithmUtil.pathLength(tree = InternalNode(splitValue = 1, left = ExternalNode(List(0.4)), right = ExternalNode(List(3))), inputValue = 0.4, 0) == Some(1))
-
-    // deeper tree cases
-    assert(AlgorithmUtil.pathLength(
-      tree = InternalNode(
-        splitValue = 100,
-        left = InternalNode(
-          splitValue = 50,
-          left = ExternalNode(List(20)),
-          right = ExternalNode(List(60))),
-        right = ExternalNode(List(101)))
-      , inputValue = 60, counter = 0) == Some(2))
-
-    assert(AlgorithmUtil.pathLength(
-      tree = InternalNode(
-        splitValue = 100,
-        left = InternalNode(
-          splitValue = 50,
-          left = ExternalNode(List(20)),
-          right = ExternalNode(List(60))),
-        right = ExternalNode(List(101)))
-      , inputValue = 60, counter = 2) == Some(4))
-
-    assert(AlgorithmUtil.pathLength(
-      tree = InternalNode(
-        splitValue = 100,
-        left = InternalNode(
-          splitValue = 50,
-          left = ExternalNode(List(20)),
-          right = ExternalNode(List(60))),
-        right = ExternalNode(List(101)))
-      , inputValue = 20, counter = 0) == Some(2))
-
-    assert(AlgorithmUtil.pathLength(
-      tree = InternalNode(
-        splitValue = 100,
-        left = InternalNode(
-          splitValue = 50,
-          left = ExternalNode(List(20)),
-          right = ExternalNode(List(60))),
-        right = ExternalNode(List(101)))
-      , inputValue = 101, counter = 0) == Some(1))
+    println("\nPath length test")
+    var buffer: ListBuffer[AnomalyDetectionInputFeatureRecord] = new ListBuffer[AnomalyDetectionInputFeatureRecord]
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(-220)))
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(-320)))
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(-220)))
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(100)))
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(700)))
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(120)))
+    val t: ITree[List[AnomalyDetectionInputFeatureRecord]] = AlgorithmUtil.buildTree(buffer.toList, List("X"), maxDepth = 100, randomSeed = Some(1))
+    assert(pathLength(t, AnomalyDetectionInputFeatureRecord("X", List(-220)), 0) == 4.0)
+    assert(pathLength(t, AnomalyDetectionInputFeatureRecord("X", List(700)), 0) == 1.0)
+    assert(pathLength(t, AnomalyDetectionInputFeatureRecord("X", List(100)), 0) == 3.0)
+    assert(pathLength(t, AnomalyDetectionInputFeatureRecord("X", List(22200)), 0) == 1.0)
   }
 
   test("random_split_no_seed") {
@@ -89,21 +80,16 @@ class AlgorithmUtilTest extends AnyFunSuite with BeforeAndAfter {
   }
 
   test("split_lists") {
-    val r = AlgorithmUtil.splitList(List(1, 2, 3, 4), 2.5)
-    assert(!r._1.zip(List(1, 2)).exists(x => x._1 != x._2))
-    assert(!r._2.zip(List(3, 4)).exists(x => x._1 != x._2))
-
-    val r2 = AlgorithmUtil.splitList(List(1, 2, 3, 4), 3)
-    assert(r2._1.zip(List(1, 2, 3)).count(x => x._1 != x._2) == 0)
-    assert(!r2._2.zip(List(4)).exists(x => x._1 != x._2))
-
-    val r3 = AlgorithmUtil.splitList(List(1, 2, 3, 4, 4, 4, 4, 4, 4, 4, 5), 4.00001)
-    assert(!r3._1.zip(List(1, 2, 3, 4, 4, 4, 4, 4, 4, 4)).exists(x => x._1 != x._2))
-    assert(r3._2.zip(List(5)).count(x => x._1 != x._2) == 0)
-
-    val r4 = AlgorithmUtil.splitList(List(1, 2, 3, 4, 4, 4, 4, 4, 4, 4, 5), 5.5)
-    assert(!r4._1.zip(List(1, 2, 3, 4, 4, 4, 4, 4, 4, 4, 5)).exists(x => x._1 != x._2))
-    assert(r4._2.isEmpty)
+    var buffer: ListBuffer[AnomalyDetectionInputFeatureRecord] = new ListBuffer[AnomalyDetectionInputFeatureRecord]
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(-220)))
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(-320)))
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(-220)))
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(100)))
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(700)))
+    buffer.append(AnomalyDetectionInputFeatureRecord("X", List(120)))
+    val split = AlgorithmUtil.splitList(buffer.toList,0,150)
+    assert(split._1.length == 5)
+    assert(split._2.length == 1)
   }
 
   test("c") {
@@ -117,7 +103,6 @@ class AlgorithmUtilTest extends AnyFunSuite with BeforeAndAfter {
     assert(AlgorithmUtil.c(1000) == 13.967940887097107)
     assert(AlgorithmUtil.c(2000) == 15.3552359988008)
   }
-
 
   after(
     // Aftercare
